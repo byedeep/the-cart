@@ -1,4 +1,3 @@
-import { Link, useNavigate } from "@tanstack/react-router";
 import { Button } from "@The-Cart/ui/components/button";
 import {
   DropdownMenu,
@@ -9,52 +8,19 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@The-Cart/ui/components/dropdown-menu";
-import { Skeleton } from "@The-Cart/ui/components/skeleton";
-
-import { authClient } from "@/lib/auth-client";
 
 export default function UserMenu() {
-  const navigate = useNavigate();
-  const { data: session, isPending } = authClient.useSession();
-
-  if (isPending) {
-    return <Skeleton className="h-9 w-24" />;
-  }
-
-  if (!session) {
-    return (
-      <Link to="/login">
-        <Button variant="outline">Sign In</Button>
-      </Link>
-    );
-  }
-
   return (
     <DropdownMenu>
       <DropdownMenuTrigger render={<Button variant="outline" />}>
-        {session.user.name}
+        User
       </DropdownMenuTrigger>
       <DropdownMenuContent className="bg-card">
         <DropdownMenuGroup>
           <DropdownMenuLabel>My Account</DropdownMenuLabel>
           <DropdownMenuSeparator />
-          <DropdownMenuItem>{session.user.email}</DropdownMenuItem>
-          <DropdownMenuItem
-            variant="destructive"
-            onClick={() => {
-              authClient.signOut({
-                fetchOptions: {
-                  onSuccess: () => {
-                    navigate({
-                      to: "/",
-                    });
-                  },
-                },
-              });
-            }}
-          >
-            Sign Out
-          </DropdownMenuItem>
+          <DropdownMenuItem>user@example.com</DropdownMenuItem>
+          <DropdownMenuItem variant="destructive">Sign Out</DropdownMenuItem>
         </DropdownMenuGroup>
       </DropdownMenuContent>
     </DropdownMenu>

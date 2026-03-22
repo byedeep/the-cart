@@ -10,7 +10,7 @@ A unified cart system where users can paste any URL and automatically generate s
 - **Backend**: Hono + tRPC (existing)
 - **Database**: SQLite + Drizzle ORM (existing)
 - **Markdown Extraction**: Jina AI API (`https://r.jina.ai/http://URL`)
-- **AI Processing**: Google Gemini API
+- **AI Processing**: Cerebras AI
 - **Browser Extension**: Manifest V3 (Chrome/Firefox compatible)
 
 ## Data Flow
@@ -22,9 +22,9 @@ Frontend sends URL to API
     ↓
 Backend calls Jina AI API → Returns Markdown
     ↓
-Backend sends Markdown + Prompt to Gemini
+Backend sends Markdown + Prompt to Cerebras
     ↓
-Gemini returns structured JSON
+Cerebras returns structured JSON
     ↓
 Store in Database
     ↓
@@ -78,7 +78,7 @@ Return Card to Frontend
 - `cart.delete` - Remove item
 - `cart.search` - Search/filter by tags, title, etc.
 
-## Gemini Prompt Template
+## Cerebras Prompt Template
 
 ```
 You are a data extraction assistant. Extract structured product information from the following markdown content.
@@ -171,7 +171,7 @@ const getMarkdown = async (url: string) => {
 
 ```bash
 # Server (.env)
-GEMINI_API_KEY=your_gemini_api_key
+CEREBRAS_API_KEY=your_cerebras_api_key
 JINA_API_KEY=optional_for_higher_limits
 
 # Extension
@@ -212,7 +212,7 @@ VITE_API_URL=http://localhost:3000
 
 ## Notes
 
-- Gemini API has generous free tier (1,500 requests/day)
+- Cerebras API offers fast inference for LLMs
 - Jina AI free tier should suffice for initial testing
 - Extension will use same auth session as web app
 - Consider caching markdown to avoid re-fetching

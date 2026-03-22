@@ -4,9 +4,9 @@ import { HeadContent, Outlet, Scripts, createRootRouteWithContext } from "@tanst
 import { TanStackRouterDevtools } from "@tanstack/react-router-devtools";
 import type { AppRouter } from "@The-Cart/api/routers/index";
 import { Toaster } from "@The-Cart/ui/components/sonner";
+import { ThemeSwitcher } from "@The-Cart/ui/components/theme-switcher";
 import type { TRPCOptionsProxy } from "@trpc/tanstack-react-query";
-
-import Header from "../components/header";
+import { ThemeProvider } from "next-themes";
 
 import appCss from "../index.css?url";
 export interface RouterAppContext {
@@ -41,16 +41,18 @@ export const Route = createRootRouteWithContext<RouterAppContext>()({
 
 function RootDocument() {
   return (
-    <html lang="en" className="dark">
+    <html lang="en" suppressHydrationWarning>
       <head>
         <HeadContent />
       </head>
       <body>
-        <div className="grid h-svh grid-rows-[auto_1fr]">
-          <Header />
+        <ThemeProvider attribute="class" defaultTheme="dark" enableSystem>
+          <div className="fixed top-8 right-8 z-50 scale-125">
+            <ThemeSwitcher size="icon-lg" />
+          </div>
           <Outlet />
-        </div>
-        <Toaster richColors />
+          <Toaster richColors />
+        </ThemeProvider>
         <TanStackRouterDevtools position="bottom-left" />
         <ReactQueryDevtools position="bottom" buttonPosition="bottom-right" />
         <Scripts />
