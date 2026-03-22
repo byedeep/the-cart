@@ -19,8 +19,7 @@
       "react-dom": "^19.2.3",
       "sonner": "^2.0.5",
       "tailwindcss": "^4.1.18",
-      "@libsql/client": "0.15.15",
-      "libsql": "0.5.22",
+
       "@trpc/client": "^11.7.2",
       "@types/react": "^19.2.10",
       "@types/react-dom": "^19.2.3"

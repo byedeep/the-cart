@@ -10,7 +10,6 @@
     }
   },
   "scripts": {
-    "db:local": "turso dev --db-file local.db",
     "db:push": "drizzle-kit push",
     "db:generate": "drizzle-kit generate",
     "db:studio": "drizzle-kit studio",
@@ -18,14 +17,14 @@
   },
   "dependencies": {
     "@The-Cart/env": "workspace:*",
-    "@libsql/client": "catalog:",
     "dotenv": "catalog:",
     "drizzle-orm": "^0.45.1",
-    "libsql": "catalog:",
+    "pg": "^8.11.3",
     "zod": "catalog:"
   },
   "devDependencies": {
     "@The-Cart/config": "workspace:*",
+    "@types/pg": "^8.11.0",
     "drizzle-kit": "^0.31.8",
     "typescript": "^5"
   }
