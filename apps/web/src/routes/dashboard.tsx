@@ -8,7 +8,7 @@ import {
   IconUserBolt,
   IconLogout,
 } from "@tabler/icons-react";
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { toast } from "sonner";
 import { useMutation } from "@tanstack/react-query";
 
@@ -21,6 +21,7 @@ import { Input } from "@The-Cart/ui/components/input";
 import { useGlobalPaste } from "../hooks/useGlobalPaste";
 import { useTRPCClient } from "../utils/trpc";
 import { authClient } from "../lib/auth-client";
+import { CartItemCard } from "../components/cart-item-card";
 
 export const Route = createFileRoute("/dashboard")({
   component: RouteComponent,
@@ -44,10 +45,63 @@ export const Route = createFileRoute("/dashboard")({
   },
 });
 
+type CartItemRow = Awaited<
+  ReturnType<ReturnType<typeof useTRPCClient>["cart"]["getAll"]["query"]>
+>[number];
+
 function RouteComponent() {
   const location = useLocation();
   const { session } = Route.useRouteContext();
   const [inputValue, setInputValue] = useState("");
+  const [cartItems, setCartItems] = useState<CartItemRow[]>([]);
+  const [cartLoading, setCartLoading] = useState(true);
+
+  const inputRef = useRef<HTMLInputElement>(null);
+  const trpcClient = useTRPCClient();
+
+  const fetchCartItems = async () => {
+    setCartLoading(true);
+    try {
+      const items = await trpcClient.cart.getAll.query();
+      setCartItems(items);
+    } catch {
+      toast.error("Failed to load cart items");
+    } finally {
+      setCartLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchCartItems();
+  }, []);
+
+  const createMutation = useMutation({
+    mutationFn: (input: { url: string }) => trpcClient.cart.create.mutate(input),
+    onSuccess: () => {
+      toast.success("Item added to cart!");
+      setInputValue("");
+      fetchCartItems();
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || "Failed to add item");
+    },
+  });
+
+  const updateStatusMutation = useMutation({
+    mutationFn: (input: { id: string; status: "saved" | "purchased" | "archived" }) =>
+      trpcClient.cart.updateStatus.mutate(input),
+    onSuccess: () => fetchCartItems(),
+    onError: () => toast.error("Failed to update status"),
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => trpcClient.cart.delete.mutate({ id }),
+    onSuccess: () => {
+      toast.success("Item removed");
+      fetchCartItems();
+    },
+    onError: () => toast.error("Failed to delete item"),
+  });
 
   const handleLogout = async () => {
     await authClient.signOut();
@@ -71,24 +125,10 @@ function RouteComponent() {
       icon: <IconSettings className="h-5 w-5 shrink-0" />,
     },
   ];
-  const inputRef = useRef<HTMLInputElement>(null);
-  const trpcClient = useTRPCClient();
-  
-  const createMutation = useMutation({
-    mutationFn: (input: { url: string }) => trpcClient.cart.create.mutate(input),
-    onSuccess: () => {
-      toast.success("Item added to cart!");
-      setInputValue("");
-    },
-    onError: (error: Error) => {
-      toast.error(error.message || "Failed to add item");
-    },
-  });
 
   const handlePaste = (text: string) => {
     setInputValue(text);
     inputRef.current?.focus();
-    
     if (isValidUrl(text)) {
       createMutation.mutate({ url: text });
     } else {
@@ -109,7 +149,7 @@ function RouteComponent() {
     try {
       const text = await navigator.clipboard.readText();
       handlePaste(text);
-    } catch (err) {
+    } catch {
       toast.error("Failed to read clipboard");
     }
   };
@@ -154,10 +194,12 @@ function RouteComponent() {
           </div>
         </SidebarBody>
       </Sidebar>
-      <div className="flex flex-1 bg-sidebar p-4">
-        <div className="flex flex-1 flex-col gap-4 rounded-3xl bg-sidebar p-6 shadow-sm">
+
+      <div className="flex flex-1 overflow-hidden bg-sidebar p-4">
+        <div className="flex flex-1 flex-col gap-6 overflow-hidden rounded-3xl bg-sidebar p-6 shadow-sm">
+          {/* URL input */}
           <div className="flex items-center justify-center">
-            <form 
+            <form
               onSubmit={handleSubmit}
               className="flex w-full max-w-xs items-center overflow-hidden rounded-full border-2 bg-card shadow-sm transition-all focus-within:ring-2 focus-within:ring-primary/50"
             >
@@ -171,6 +213,7 @@ function RouteComponent() {
               <button
                 type="button"
                 onClick={handlePasteButtonClick}
+                disabled={createMutation.isPending}
                 className="flex h-12 w-14 items-center justify-center bg-transparent border-0 shadow-none appearance-none"
               >
                 <HugeiconsIcon
@@ -181,8 +224,68 @@ function RouteComponent() {
               </button>
             </form>
           </div>
+
+          {/* Cart items grid */}
+          <div className="flex-1 overflow-y-auto">
+            {cartLoading ? (
+              <CartSkeleton />
+            ) : cartItems.length === 0 ? (
+              <EmptyState />
+            ) : (
+              <div className="grid grid-cols-[repeat(auto-fill,minmax(220px,1fr))] gap-4 pb-4">
+                {cartItems.map((item) => (
+                  <CartItemCard
+                    key={item.id}
+                    item={{
+                      ...item,
+                      tags: item.tags ?? [],
+                      priority: item.priority as "low" | "medium" | "high",
+                      status: item.status as "saved" | "purchased" | "archived",
+                    }}
+                    onStatusChange={(id, status) =>
+                      updateStatusMutation.mutate({ id, status })
+                    }
+                    onDelete={(id) => deleteMutation.mutate(id)}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       </div>
+    </div>
+  );
+}
+
+function CartSkeleton() {
+  return (
+    <div className="grid grid-cols-[repeat(auto-fill,minmax(220px,1fr))] gap-4">
+      {Array.from({ length: 6 }).map((_, i) => (
+        <div
+          key={i}
+          className="flex flex-col overflow-hidden rounded-2xl bg-card ring-1 ring-foreground/8 animate-pulse"
+        >
+          <div className="aspect-[4/3] w-full bg-muted" />
+          <div className="flex flex-col gap-2 p-3.5">
+            <div className="h-3 w-16 rounded-full bg-muted" />
+            <div className="h-4 w-3/4 rounded bg-muted" />
+            <div className="h-3 w-full rounded bg-muted" />
+            <div className="h-3 w-2/3 rounded bg-muted" />
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function EmptyState() {
+  return (
+    <div className="flex h-full flex-col items-center justify-center gap-3 text-center">
+      <div className="text-4xl">🛒</div>
+      <p className="text-sm font-medium text-foreground">Your cart is empty</p>
+      <p className="text-xs text-muted-foreground">
+        Paste a product URL above to save your first item
+      </p>
     </div>
   );
 }
