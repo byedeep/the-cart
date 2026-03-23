@@ -181,6 +181,51 @@ export const cartRouter = router({
 
       return { success: true, item };
     }),
+
+  update: protectedProcedure
+    .input(
+      z.object({
+        id: z.string(),
+        title: z.string().optional(),
+        description: z.string().optional(),
+        price: z.string().optional().nullable(),
+        currency: z.string().optional().nullable(),
+        imageUrl: z.string().optional().nullable(),
+        brand: z.string().optional().nullable(),
+        category: z.string().optional().nullable(),
+        notes: z.string().optional().nullable(),
+      })
+    )
+    .mutation(async ({ input, ctx }) => {
+      // Verify ownership
+      const [existingItem] = await db
+        .select()
+        .from(cartItem)
+        .where(eq(cartItem.id, input.id))
+        .limit(1);
+
+      if (!existingItem || existingItem.userId !== ctx.session.user.id) {
+        throw new Error("Item not found or access denied");
+      }
+
+      const updateData: Partial<typeof cartItem.$inferInsert> = {};
+      if (input.title !== undefined) updateData.title = input.title;
+      if (input.description !== undefined) updateData.description = input.description;
+      if (input.price !== undefined) updateData.price = input.price;
+      if (input.currency !== undefined) updateData.currency = input.currency;
+      if (input.imageUrl !== undefined) updateData.imageUrl = input.imageUrl;
+      if (input.brand !== undefined) updateData.brand = input.brand;
+      if (input.category !== undefined) updateData.category = input.category;
+      if (input.notes !== undefined) updateData.notes = input.notes;
+
+      const [item] = await db
+        .update(cartItem)
+        .set(updateData)
+        .where(eq(cartItem.id, input.id))
+        .returning();
+
+      return { success: true, item };
+    }),
 });
 
 export type CartRouter = typeof cartRouter;

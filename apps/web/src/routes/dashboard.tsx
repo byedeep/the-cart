@@ -103,6 +103,16 @@ function RouteComponent() {
     onError: () => toast.error("Failed to delete item"),
   });
 
+  const updateMutation = useMutation({
+    mutationFn: (input: { id: string; data: { title?: string; price?: string | null; currency?: string | null; imageUrl?: string | null } }) =>
+      trpcClient.cart.update.mutate({ id: input.id, ...input.data }),
+    onSuccess: () => {
+      toast.success("Item updated!");
+      fetchCartItems();
+    },
+    onError: () => toast.error("Failed to update item"),
+  });
+
   const handleLogout = async () => {
     await authClient.signOut();
     window.location.replace("/login");
@@ -232,7 +242,7 @@ function RouteComponent() {
             ) : cartItems.length === 0 ? (
               <EmptyState />
             ) : (
-              <div className="grid grid-cols-[repeat(auto-fill,minmax(220px,1fr))] gap-4 pb-4">
+              <div className="grid grid-cols-[repeat(auto-fill,minmax(255px,1fr))] gap-4 pb-4">
                 {cartItems.map((item) => (
                   <CartItemCard
                     key={item.id}
@@ -246,6 +256,7 @@ function RouteComponent() {
                       updateStatusMutation.mutate({ id, status })
                     }
                     onDelete={(id) => deleteMutation.mutate(id)}
+                    onUpdate={(id, data) => updateMutation.mutate({ id, data })}
                   />
                 ))}
               </div>
@@ -259,18 +270,21 @@ function RouteComponent() {
 
 function CartSkeleton() {
   return (
-    <div className="grid grid-cols-[repeat(auto-fill,minmax(220px,1fr))] gap-4">
+    <div className="grid grid-cols-[repeat(auto-fill,minmax(255px,1fr))] gap-4">
       {Array.from({ length: 6 }).map((_, i) => (
         <div
           key={i}
-          className="flex flex-col overflow-hidden rounded-2xl bg-card ring-1 ring-foreground/8 animate-pulse"
+          className="flex flex-col overflow-hidden rounded-3xl bg-card ring-1 ring-foreground/6 animate-pulse"
         >
-          <div className="aspect-[4/3] w-full bg-muted" />
-          <div className="flex flex-col gap-2 p-3.5">
-            <div className="h-3 w-16 rounded-full bg-muted" />
-            <div className="h-4 w-3/4 rounded bg-muted" />
-            <div className="h-3 w-full rounded bg-muted" />
-            <div className="h-3 w-2/3 rounded bg-muted" />
+          <div className="m-3 aspect-[5/4] rounded-2xl bg-muted" />
+          <div className="flex flex-col gap-2 px-4 pt-3 pb-4">
+            <div className="h-4 w-3/4 rounded-lg bg-muted" />
+            <div className="h-3 w-1/3 rounded-lg bg-muted" />
+            <div className="h-3 w-full rounded-lg bg-muted" />
+            <div className="mt-2 flex items-center justify-between">
+              <div className="h-7 w-16 rounded-full bg-muted" />
+              <div className="h-8 w-16 rounded-full bg-muted" />
+            </div>
           </div>
         </div>
       ))}

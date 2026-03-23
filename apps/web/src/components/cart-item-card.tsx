@@ -1,5 +1,17 @@
 import { cn } from "@The-Cart/ui/lib/utils";
 import { Button } from "@The-Cart/ui/components/button";
+import { Input } from "@The-Cart/ui/components/input";
+import { useState } from "react";
+import { HugeiconsIcon } from "@hugeicons/react";
+import { CancelCircleIcon } from "@hugeicons/core-free-icons";
+import {
+    DropdownMenu,
+    DropdownMenuTrigger,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuSeparator,
+} from "@The-Cart/ui/components/dropdown-menu";
+import { IconDots, IconExternalLink, IconPencil, IconArchive, IconCheck } from "@tabler/icons-react";
 
 type CartItemStatus = "saved" | "purchased" | "archived";
 type CartItemPriority = "low" | "medium" | "high";
@@ -22,28 +34,33 @@ export interface CartItem {
     createdAt: Date | string;
 }
 
-const STATUS_STYLES: Record<CartItemStatus, string> = {
-    saved: "bg-blue-500/10 text-blue-600 dark:text-blue-400",
-    purchased: "bg-green-500/10 text-green-600 dark:text-green-400",
-    archived: "bg-neutral-500/10 text-neutral-500 dark:text-neutral-400",
-};
-
-const PRIORITY_DOT: Record<CartItemPriority, string> = {
-    low: "bg-neutral-400",
-    medium: "bg-amber-400",
-    high: "bg-red-500",
-};
-
 interface CartItemCardProps {
     item: CartItem;
     onStatusChange?: (id: string, status: CartItemStatus) => void;
     onDelete?: (id: string) => void;
+    onUpdate?: (id: string, data: Partial<CartItem>) => void;
 }
 
-export function CartItemCard({ item, onStatusChange, onDelete }: CartItemCardProps) {
+export function CartItemCard({ item, onStatusChange, onDelete, onUpdate }: CartItemCardProps) {
+    const [isEditing, setIsEditing] = useState(false);
+    const [editData, setEditData] = useState({
+        title: item.title,
+        price: item.price || "",
+        currency: item.currency || "",
+        imageUrl: item.imageUrl || "",
+    });
+
     const formattedPrice =
         item.price
-            ? `${item.currency ? item.currency + " " : ""}${item.price}`
+            ? (() => {
+                const num = parseFloat(item.price.replace(/,/g, ""));
+                if (isNaN(num)) return `${item.currency ? item.currency + " " : ""}${item.price}`;
+                const formatted = num.toLocaleString("en-US", {
+                    minimumFractionDigits: 0,
+                    maximumFractionDigits: 2,
+                });
+                return `${item.currency ? item.currency + " " : ""}${formatted}`;
+            })()
             : null;
 
     const hostname = (() => {
@@ -54,135 +71,229 @@ export function CartItemCard({ item, onStatusChange, onDelete }: CartItemCardPro
         }
     })();
 
+    const handleSave = () => {
+        onUpdate?.(item.id, {
+            title: editData.title,
+            price: editData.price || null,
+            currency: editData.currency || null,
+            imageUrl: editData.imageUrl || null,
+        });
+        setIsEditing(false);
+    };
+
+    const handleCancel = () => {
+        setEditData({
+            title: item.title,
+            price: item.price || "",
+            currency: item.currency || "",
+            imageUrl: item.imageUrl || "",
+        });
+        setIsEditing(false);
+    };
+
+    if (isEditing) {
+        return (
+            <div className="group relative flex flex-col overflow-hidden rounded-3xl bg-card shadow-sm ring-1 ring-foreground/6">
+                <div className="flex flex-1 flex-col gap-3 p-4">
+                    <div>
+                        <label className="mb-1 block text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+                            Title
+                        </label>
+                        <Input
+                            value={editData.title}
+                            onChange={(e) => setEditData({ ...editData, title: e.target.value })}
+                            className="h-9 rounded-xl text-xs"
+                        />
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                        <div>
+                            <label className="mb-1 block text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+                                Price
+                            </label>
+                            <Input
+                                value={editData.price}
+                                onChange={(e) => setEditData({ ...editData, price: e.target.value })}
+                                className="h-9 rounded-xl text-xs"
+                                placeholder="e.g. 29.99"
+                            />
+                        </div>
+                        <div>
+                            <label className="mb-1 block text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+                                Currency
+                            </label>
+                            <Input
+                                value={editData.currency}
+                                onChange={(e) => setEditData({ ...editData, currency: e.target.value })}
+                                className="h-9 rounded-xl text-xs"
+                                placeholder="e.g. USD"
+                            />
+                        </div>
+                    </div>
+                    <div>
+                        <label className="mb-1 block text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+                            Image URL
+                        </label>
+                        <Input
+                            value={editData.imageUrl}
+                            onChange={(e) => setEditData({ ...editData, imageUrl: e.target.value })}
+                            className="h-9 rounded-xl text-xs"
+                            placeholder="https://..."
+                        />
+                    </div>
+                </div>
+                <div className="flex items-center gap-2 border-t border-foreground/6 px-4 py-3">
+                    <Button
+                        variant="ghost"
+                        size="sm"
+                        className="flex-1 justify-center rounded-xl"
+                        onClick={handleCancel}
+                    >
+                        Cancel
+                    </Button>
+                    <Button
+                        size="sm"
+                        className="flex-1 justify-center rounded-xl"
+                        onClick={handleSave}
+                    >
+                        Save
+                    </Button>
+                </div>
+            </div>
+        );
+    }
+
     return (
-        <div className="group relative flex flex-col overflow-hidden rounded-2xl bg-card ring-1 ring-foreground/8 transition-all duration-200 hover:ring-foreground/20 hover:shadow-md">
+        <div className="group relative flex flex-col overflow-hidden rounded-3xl bg-card shadow-sm ring-1 ring-foreground/6 transition-all duration-300 hover:shadow-lg hover:ring-foreground/12">
+            {/* Delete button — appears on hover */}
+            {onDelete && (
+                <button
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        onDelete(item.id);
+                    }}
+                    className="absolute right-5 top-5 z-10 flex h-7 w-7 items-center justify-center rounded-full bg-black/50 text-white opacity-0 backdrop-blur-md transition-all duration-200 hover:bg-red-500 group-hover:opacity-100"
+                >
+                    <HugeiconsIcon icon={CancelCircleIcon} size={14} />
+                </button>
+            )}
+
             {/* Image */}
             {item.imageUrl && (
-                <div className="relative aspect-[4/3] w-full overflow-hidden bg-muted">
-                    <img
-                        src={item.imageUrl}
-                        alt={item.title}
-                        className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
-                    />
-                    {/* Price badge over image */}
-                    {formattedPrice && (
-                        <div className="absolute bottom-2 left-2 rounded-full bg-black/60 px-2.5 py-0.5 text-xs font-semibold text-white backdrop-blur-sm">
-                            {formattedPrice}
+                <div className="relative m-3 mb-0 overflow-hidden rounded-2xl bg-muted">
+                    <div className="aspect-[5/4] w-full overflow-hidden">
+                        <img
+                            src={item.imageUrl}
+                            alt={item.title}
+                            className="h-full w-full object-cover transition-transform duration-500 ease-out group-hover:scale-105"
+                            onError={(e) => {
+                                (e.target as HTMLImageElement).style.display = "none";
+                            }}
+                        />
+                    </div>
+
+                    {/* Brand badge */}
+                    {item.brand && (
+                        <div className="absolute left-2.5 top-2.5 rounded-full bg-white/80 px-3 py-1 text-[10px] font-semibold uppercase tracking-wider text-neutral-800 shadow-sm backdrop-blur-md dark:bg-black/50 dark:text-neutral-200">
+                            {item.brand}
+                        </div>
+                    )}
+
+                    {/* Status indicator */}
+                    {item.status !== "saved" && (
+                        <div
+                            className={cn(
+                                "absolute right-2.5 top-2.5 rounded-full px-2.5 py-1 text-[10px] font-medium capitalize backdrop-blur-md shadow-sm",
+                                item.status === "purchased"
+                                    ? "bg-green-500/20 text-green-700 dark:text-green-300"
+                                    : "bg-neutral-500/20 text-neutral-600 dark:text-neutral-300",
+                            )}
+                        >
+                            {item.status}
                         </div>
                     )}
                 </div>
             )}
 
             {/* Body */}
-            <div className="flex flex-1 flex-col gap-2 p-3.5">
-                {/* Status + Priority row */}
-                <div className="flex items-center gap-2">
-                    <span
-                        className={cn(
-                            "rounded-full px-2 py-0.5 text-[10px] font-medium capitalize",
-                            STATUS_STYLES[item.status],
-                        )}
-                    >
-                        {item.status}
-                    </span>
-                    <span className="flex items-center gap-1 text-[10px] text-muted-foreground capitalize">
-                        <span className={cn("inline-block h-1.5 w-1.5 rounded-full", PRIORITY_DOT[item.priority])} />
-                        {item.priority}
-                    </span>
-                    <span className="ml-auto text-[10px] text-muted-foreground">{hostname}</span>
-                </div>
+            <div className="flex flex-1 flex-col gap-1.5 px-4 pt-4 pb-3">
+                {/* Title */}
+                <h3 className="line-clamp-1 text-[15px] font-semibold leading-snug tracking-tight text-card-foreground">
+                    {item.title}
+                </h3>
 
-                {/* Brand + Title */}
-                <div>
-                    {item.brand && (
-                        <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
-                            {item.brand}
-                        </p>
-                    )}
-                    <h3 className="line-clamp-2 text-sm font-medium leading-snug text-card-foreground">
-                        {item.title}
-                    </h3>
-                </div>
+                {/* Subtitle — source hostname */}
+                <p className="text-[11px] text-muted-foreground">
+                    {hostname}
+                </p>
 
                 {/* Description */}
                 {item.description && (
-                    <p className="line-clamp-2 text-[11px] leading-relaxed text-muted-foreground">
+                    <p className="mt-0.5 line-clamp-2 text-[11px] leading-relaxed text-muted-foreground/80">
                         {item.description}
-                    </p>
-                )}
-
-                {/* Price (when no image) */}
-                {!item.imageUrl && formattedPrice && (
-                    <p className="text-base font-semibold text-foreground">{formattedPrice}</p>
-                )}
-
-                {/* Tags */}
-                {item.tags.length > 0 && (
-                    <div className="flex flex-wrap gap-1">
-                        {item.tags.slice(0, 4).map((tag) => (
-                            <span
-                                key={tag}
-                                className="rounded-full bg-muted px-2 py-0.5 text-[10px] text-muted-foreground"
-                            >
-                                {tag}
-                            </span>
-                        ))}
-                        {item.tags.length > 4 && (
-                            <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] text-muted-foreground">
-                                +{item.tags.length - 4}
-                            </span>
-                        )}
-                    </div>
-                )}
-
-                {/* Notes */}
-                {item.notes && (
-                    <p className="line-clamp-1 rounded-lg bg-muted/60 px-2.5 py-1.5 text-[11px] italic text-muted-foreground">
-                        {item.notes}
                     </p>
                 )}
             </div>
 
-            {/* Footer actions */}
-            <div className="flex items-center gap-1.5 border-t border-foreground/8 px-3.5 py-2.5">
-                <Button
-                    variant="ghost"
-                    size="xs"
-                    className="flex-1 justify-center"
-                    onClick={() => window.open(item.url, "_blank")}
-                >
-                    View
-                </Button>
-                {item.status !== "purchased" && (
-                    <Button
-                        variant="ghost"
-                        size="xs"
-                        className="flex-1 justify-center text-green-600 hover:bg-green-500/10 hover:text-green-600 dark:text-green-400"
-                        onClick={() => onStatusChange?.(item.id, "purchased")}
-                    >
-                        Bought
-                    </Button>
+            {/* Bottom action bar */}
+            <div className="flex items-center justify-between px-4 pb-4 pt-1">
+                {/* Price pill */}
+                {formattedPrice ? (
+                    <span className="rounded-full bg-muted px-3.5 py-1.5 text-[13px] font-semibold text-foreground">
+                        {formattedPrice}
+                    </span>
+                ) : (
+                    <span />
                 )}
-                {item.status !== "archived" && (
-                    <Button
-                        variant="ghost"
-                        size="xs"
-                        className="flex-1 justify-center"
-                        onClick={() => onStatusChange?.(item.id, "archived")}
+
+                <div className="flex items-center gap-1.5">
+                    {/* More options menu */}
+                    <DropdownMenu>
+                        <DropdownMenuTrigger
+                            className="flex h-8 w-8 items-center justify-center rounded-full text-muted-foreground opacity-0 transition-all duration-200 hover:bg-muted hover:text-foreground group-hover:opacity-100"
+                        >
+                            <IconDots className="h-4 w-4" />
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent side="top" align="end" sideOffset={4}>
+                            <DropdownMenuItem onClick={() => setIsEditing(true)}>
+                                <IconPencil className="mr-2 h-3.5 w-3.5" />
+                                Edit
+                            </DropdownMenuItem>
+                            {item.status !== "purchased" && (
+                                <DropdownMenuItem onClick={() => onStatusChange?.(item.id, "purchased")}>
+                                    <IconCheck className="mr-2 h-3.5 w-3.5" />
+                                    Mark as Bought
+                                </DropdownMenuItem>
+                            )}
+                            {item.status !== "archived" && (
+                                <DropdownMenuItem onClick={() => onStatusChange?.(item.id, "archived")}>
+                                    <IconArchive className="mr-2 h-3.5 w-3.5" />
+                                    Archive
+                                </DropdownMenuItem>
+                            )}
+                            {onDelete && (
+                                <>
+                                    <DropdownMenuSeparator />
+                                    <DropdownMenuItem
+                                        variant="destructive"
+                                        onClick={() => onDelete(item.id)}
+                                    >
+                                        <HugeiconsIcon icon={CancelCircleIcon} size={14} className="mr-2" />
+                                        Delete
+                                    </DropdownMenuItem>
+                                </>
+                            )}
+                        </DropdownMenuContent>
+                    </DropdownMenu>
+
+                    {/* View CTA button */}
+                    <button
+                        onClick={() => window.open(item.url, "_blank")}
+                        className="inline-flex items-center gap-1.5 rounded-full bg-foreground px-4 py-2 text-xs font-medium text-background transition-all duration-200 hover:opacity-85 active:scale-95"
                     >
-                        Archive
-                    </Button>
-                )}
-                {onDelete && (
-                    <Button
-                        variant="ghost"
-                        size="icon-xs"
-                        className="text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
-                        onClick={() => onDelete(item.id)}
-                    >
-                        ×
-                    </Button>
-                )}
+                        View
+                        <IconExternalLink className="h-3.5 w-3.5" />
+                    </button>
+                </div>
             </div>
         </div>
     );
