@@ -1,17 +1,4 @@
-import TurndownService from "turndown";
 import { extractItemFromContent, type ExtractedItem } from "./ai";
-
-const turndownService = new TurndownService({
-  headingStyle: "atx",
-  bulletListMarker: "-",
-  codeBlockStyle: "fenced",
-});
-
-// Clean up the HTML before converting to markdown
-turndownService.addRule("removeScripts", {
-  filter: ["script", "style", "nav", "footer", "header", "aside"],
-  replacement: () => "",
-});
 
 export interface ProcessedUrlResult {
   url: string;
@@ -22,36 +9,32 @@ export interface ProcessedUrlResult {
 
 export async function processUrl(
   url: string,
-  apiKey: string
+  cerebrasApiKey: string,
+  jinaApiKey: string
 ): Promise<ProcessedUrlResult> {
-  // Fetch the webpage
-  const response = await fetch(url, {
+  // Use Jina AI Reader API to fetch and convert to markdown
+  const jinaUrl = `https://r.jina.ai/http://${url.replace(/^https?:\/\//, '')}`;
+  
+  const response = await fetch(jinaUrl, {
     headers: {
-      "User-Agent":
-        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-      Accept:
-        "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
-      "Accept-Language": "en-US,en;q=0.5",
+      "Authorization": `Bearer ${jinaApiKey}`,
     },
   });
 
   if (!response.ok) {
     throw new Error(
-      `Failed to fetch URL: ${response.status} ${response.statusText}`
+      `Failed to fetch URL via Jina AI: ${response.status} ${response.statusText}`
     );
   }
 
-  const html = await response.text();
-
-  // Convert HTML to markdown
-  const markdownContent = turndownService.turndown(html);
+  const markdownContent = await response.text();
 
   // Extract domain for source
   const urlObj = new URL(url);
   const source = urlObj.hostname.replace(/^www\./, "");
 
   // Use AI to extract structured data
-  const extractedData = await extractItemFromContent(markdownContent, url, apiKey);
+  const extractedData = await extractItemFromContent(markdownContent, url, cerebrasApiKey);
 
   return {
     url,

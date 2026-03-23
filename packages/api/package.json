@@ -18,7 +18,6 @@
     "@trpc/server": "catalog:",
     "dotenv": "catalog:",
     "drizzle-orm": "^0.45.1",
-    "turndown": "^7.2.2",
     "zod": "catalog:"
   },
   "devDependencies": {

@@ -11,7 +11,7 @@ export const cartRouter = router({
     .input(z.object({ url: z.string().url() }))
     .mutation(async ({ input, ctx }) => {
       // Process the URL
-      const result = await processUrl(input.url, env.CEREBRAS_API_KEY);
+      const result = await processUrl(input.url, env.CEREBRAS_API_KEY, env.JINA_API_KEY);
 
       // Generate unique ID
       const id = crypto.randomUUID();

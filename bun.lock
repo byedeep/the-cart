@@ -112,7 +112,6 @@
         "@trpc/server": "catalog:",
         "dotenv": "catalog:",
         "drizzle-orm": "^0.45.1",
-        "turndown": "^7.2.2",
         "zod": "catalog:",
       },
       "devDependencies": {
@@ -155,7 +154,7 @@
         "typescript": "^5",
       },
     },
-    "packages/env": {
+    "packages/db/env": {
       "name": "@The-Cart/env",
       "version": "0.0.0",
       "dependencies": {
@@ -222,7 +221,7 @@
 
     "@The-Cart/db": ["@The-Cart/db@workspace:packages/db"],
 
-    "@The-Cart/env": ["@The-Cart/env@workspace:packages/env"],
+    "@The-Cart/env": ["@The-Cart/env@workspace:packages/db/env"],
 
     "@The-Cart/extension": ["@The-Cart/extension@workspace:apps/extension"],
 

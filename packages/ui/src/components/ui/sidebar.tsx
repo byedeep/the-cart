@@ -115,24 +115,39 @@ export const MobileSidebar = ({
 export const SidebarLink = ({
   link,
   className,
+  isActive,
   ...props
 }: {
   link: Links;
   className?: string;
+  isActive?: boolean;
 }) => {
   return (
     <a
       href={link.href}
       className={cn(
-        "flex items-center justify-start gap-2  group/sidebar py-2",
+        "flex items-center justify-start gap-2 group/sidebar py-2 rounded-md px-2 transition-colors duration-200",
+        isActive
+          ? "bg-primary text-white"
+          : "hover:bg-sidebar-accent/50 text-neutral-700 dark:text-neutral-200",
         className
       )}
       {...props}
     >
-      {link.icon}
+      <span
+        className={cn(
+          "transition-transform duration-200 ease-in-out group-hover/sidebar:scale-110",
+          isActive && "text-white"
+        )}
+      >
+        {link.icon}
+      </span>
 
       <span
-        className="text-neutral-700 dark:text-neutral-200 text-sm group-hover/sidebar:translate-x-1 whitespace-pre inline-block !p-0 !m-0"
+        className={cn(
+          "text-sm group-hover/sidebar:translate-x-1 transition-all duration-200 ease-in-out whitespace-pre inline-block !p-0 !m-0",
+          isActive ? "text-white font-medium" : "text-neutral-700 dark:text-neutral-200"
+        )}
       >
         {link.label}
       </span>
