@@ -1,9 +1,24 @@
 import react from '@vitejs/plugin-react';
 import { defineConfig } from 'vite';
 import { resolve } from 'path';
+import { viteStaticCopy } from 'vite-plugin-static-copy';
 
 export default defineConfig({
-  plugins: [react()],
+  plugins: [
+    react(),
+    viteStaticCopy({
+      targets: [
+        {
+          src: 'manifest.json',
+          dest: '.',
+        },
+        {
+          src: 'icons/icon*.png',
+          dest: '.',
+        },
+      ],
+    }),
+  ],
   build: {
     outDir: 'dist',
     emptyOutDir: true,
