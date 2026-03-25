@@ -1,36 +1,31 @@
-// API client for extension
+// API client for extension using tRPC
+
+import { createTRPCClient, httpBatchLink } from '@trpc/client';
 
 const API_BASE_URL = 'http://localhost:3000';
 
+// Create tRPC client
+const trpcClient = createTRPCClient<any>({
+  links: [
+    httpBatchLink({
+      url: `${API_BASE_URL}/trpc`,
+      fetch(url: string | URL | Request, options?: RequestInit) {
+        return fetch(url, {
+          ...options,
+          credentials: 'include',
+        });
+      },
+    }),
+  ],
+});
+
 export async function addToCart(url: string) {
-  const response = await fetch(`${API_BASE_URL}/trpc/cart.create`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    credentials: 'include',
-    body: JSON.stringify({
-      json: { url }
-    })
-  });
-
-  if (!response.ok) {
-    throw new Error(`Failed to add item: ${response.statusText}`);
-  }
-
-  return response.json();
+  // @ts-ignore - Runtime shape is correct
+  return trpcClient.cart.create.mutate({ url });
 }
 
 export async function getRecentItems() {
-  const response = await fetch(`${API_BASE_URL}/trpc/cart.getAll`, {
-    method: 'GET',
-    credentials: 'include'
-  });
-
-  if (!response.ok) {
-    throw new Error(`Failed to fetch items: ${response.statusText}`);
-  }
-
-  const result = await response.json();
-  return result.result?.data?.json || [];
+  // @ts-ignore - Runtime shape is correct
+  const items = await trpcClient.cart.getAll.query();
+  return items;
 }

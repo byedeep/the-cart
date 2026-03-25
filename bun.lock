@@ -24,6 +24,8 @@
       "name": "@The-Cart/extension",
       "version": "1.0.0",
       "dependencies": {
+        "@The-Cart/api": "workspace:*",
+        "@trpc/client": "^11.0.1",
         "react": "^19.2.3",
         "react-dom": "^19.2.3",
       },

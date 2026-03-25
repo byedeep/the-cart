@@ -226,6 +226,49 @@ export const cartRouter = router({
 
       return { success: true, item };
     }),
+
+  search: protectedProcedure
+    .input(z.object({ query: z.string().min(1) }))
+    .query(async ({ input, ctx }) => {
+      const items = await db
+        .select()
+        .from(cartItem)
+        .where(
+          eq(cartItem.userId, ctx.session.user.id)
+        )
+        .orderBy(desc(cartItem.createdAt));
+
+      // Filter items client-side for text search
+      const filteredItems = items.filter(
+        (item) =>
+          item.title.toLowerCase().includes(input.query.toLowerCase()) ||
+          item.description.toLowerCase().includes(input.query.toLowerCase()) ||
+          (item.brand?.toLowerCase() || "").includes(input.query.toLowerCase()) ||
+          (item.category?.toLowerCase() || "").includes(input.query.toLowerCase()) ||
+          item.url.toLowerCase().includes(input.query.toLowerCase())
+      );
+
+      return filteredItems;
+    }),
+
+  findByUrl: protectedProcedure
+    .input(z.object({ url: z.string().url() }))
+    .query(async ({ input, ctx }) => {
+      const items = await db
+        .select()
+        .from(cartItem)
+        .where(eq(cartItem.userId, ctx.session.user.id))
+        .orderBy(desc(cartItem.createdAt));
+
+      // Check for exact URL match (normalize URLs for comparison)
+      const normalizedInputUrl = input.url.toLowerCase().replace(/\/$/, "");
+      const matchingItem = items.find((item) => {
+        const normalizedItemUrl = item.url.toLowerCase().replace(/\/$/, "");
+        return normalizedItemUrl === normalizedInputUrl;
+      });
+
+      return matchingItem || null;
+    }),
 });
 
 export type CartRouter = typeof cartRouter;

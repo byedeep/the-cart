@@ -38,6 +38,9 @@ export const cartItem = pgTable(
     index("cart_item_userId_idx").on(table.userId),
     index("cart_item_status_idx").on(table.status),
     index("cart_item_createdAt_idx").on(table.createdAt),
+    index("cart_item_url_idx").on(table.url),
+    index("cart_item_title_idx").on(table.title),
+    index("cart_item_brand_idx").on(table.brand),
   ],
 );
 

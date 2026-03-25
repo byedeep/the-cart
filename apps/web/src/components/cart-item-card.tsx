@@ -226,16 +226,10 @@ export function CartItemCard({ item, onStatusChange, onDelete, onUpdate }: CartI
                     {hostname}
                 </p>
 
-                {/* Description */}
-                {item.description && (
-                    <p className="mt-0.5 line-clamp-2 text-[11px] leading-relaxed text-muted-foreground/80">
-                        {item.description}
-                    </p>
-                )}
             </div>
 
             {/* Bottom action bar */}
-            <div className="flex items-center justify-between px-4 pb-4 pt-1">
+            <div className="flex items-center justify-between px-4 pb-4 pt-4">
                 {/* Price pill */}
                 {formattedPrice ? (
                     <span className="rounded-full bg-muted px-3.5 py-1.5 text-[13px] font-semibold text-foreground">

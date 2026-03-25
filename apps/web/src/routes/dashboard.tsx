@@ -1,6 +1,6 @@
 import { createFileRoute, useLocation } from "@tanstack/react-router";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { FilePasteIcon } from "@hugeicons/core-free-icons";
+import { FilePasteIcon, SearchIcon } from "@hugeicons/core-free-icons";
 import { motion } from "motion/react";
 import {
   IconBrandTabler,
@@ -10,7 +10,7 @@ import {
 } from "@tabler/icons-react";
 import { useState, useRef, useEffect } from "react";
 import { toast } from "sonner";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 
 import {
   Sidebar,
@@ -55,6 +55,8 @@ function RouteComponent() {
   const [inputValue, setInputValue] = useState("");
   const [cartItems, setCartItems] = useState<CartItemRow[]>([]);
   const [cartLoading, setCartLoading] = useState(true);
+  const [displayedItems, setDisplayedItems] = useState<CartItemRow[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
 
   const inputRef = useRef<HTMLInputElement>(null);
   const trpcClient = useTRPCClient();
@@ -64,6 +66,7 @@ function RouteComponent() {
     try {
       const items = await trpcClient.cart.getAll.query();
       setCartItems(items);
+      setDisplayedItems(items);
     } catch {
       toast.error("Failed to load cart items");
     } finally {
@@ -74,6 +77,30 @@ function RouteComponent() {
   useEffect(() => {
     fetchCartItems();
   }, []);
+
+  // Search query
+  const searchQuery = useQuery({
+    queryKey: ["cartSearch", inputValue],
+    queryFn: async () => {
+      if (!inputValue || inputValue.length < 2 || isValidUrl(inputValue)) {
+        return null;
+      }
+      const results = await trpcClient.cart.search.query({ query: inputValue });
+      return results;
+    },
+    enabled: inputValue.length >= 2 && !isValidUrl(inputValue),
+  });
+
+  // Update displayed items based on search
+  useEffect(() => {
+    if (searchQuery.data) {
+      setDisplayedItems(searchQuery.data);
+      setIsSearching(true);
+    } else if (!inputValue) {
+      setDisplayedItems(cartItems);
+      setIsSearching(false);
+    }
+  }, [searchQuery.data, inputValue, cartItems]);
 
   const createMutation = useMutation({
     mutationFn: (input: { url: string }) => trpcClient.cart.create.mutate(input),
@@ -136,13 +163,25 @@ function RouteComponent() {
     },
   ];
 
+  const checkDuplicateAndCreate = async (url: string) => {
+    // Check if URL already exists
+    const existingItem = await trpcClient.cart.findByUrl.query({ url });
+    if (existingItem) {
+      toast.info("This item is already in your cart!", {
+        description: existingItem.title,
+      });
+      // Scroll to or highlight the existing item
+      setInputValue("");
+      return;
+    }
+    createMutation.mutate({ url });
+  };
+
   const handlePaste = (text: string) => {
     setInputValue(text);
     inputRef.current?.focus();
     if (isValidUrl(text)) {
-      createMutation.mutate({ url: text });
-    } else {
-      toast.error("Invalid URL. Please paste a valid URL.");
+      checkDuplicateAndCreate(text);
     }
   };
 
@@ -150,9 +189,12 @@ function RouteComponent() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (inputValue && isValidUrl(inputValue)) {
-      createMutation.mutate({ url: inputValue });
+    if (!inputValue) return;
+
+    if (isValidUrl(inputValue)) {
+      checkDuplicateAndCreate(inputValue);
     }
+    // If not a URL, search is already happening via the query
   };
 
   const handlePasteButtonClick = async () => {
@@ -162,6 +204,17 @@ function RouteComponent() {
     } catch {
       toast.error("Failed to read clipboard");
     }
+  };
+
+  const clearSearch = () => {
+    setInputValue("");
+    setDisplayedItems(cartItems);
+    setIsSearching(false);
+  };
+
+  const getPlaceholder = () => {
+    if (isSearching) return "Searching...";
+    return "Paste a link or search your cart...";
   };
 
   return (
@@ -207,43 +260,72 @@ function RouteComponent() {
 
       <div className="flex flex-1 overflow-hidden bg-sidebar p-4">
         <div className="flex flex-1 flex-col gap-6 overflow-hidden rounded-3xl bg-sidebar p-6 shadow-sm">
-          {/* URL input */}
+          {/* URL input / Search bar */}
           <div className="flex items-center justify-center">
             <form
               onSubmit={handleSubmit}
-              className="flex w-full max-w-xs items-center overflow-hidden rounded-full border-2 bg-card shadow-sm transition-all focus-within:ring-2 focus-within:ring-primary/50"
+              className="flex w-full max-w-md items-center overflow-hidden rounded-full border-2 bg-card shadow-sm transition-all focus-within:ring-2 focus-within:ring-primary/50"
             >
+              <div className="flex h-12 w-14 items-center justify-center text-muted-foreground">
+                <HugeiconsIcon
+                  icon={isSearching ? SearchIcon : FilePasteIcon}
+                  size={20}
+                  className={isSearching ? "text-primary" : "text-muted-foreground"}
+                />
+              </div>
               <Input
                 ref={inputRef}
-                placeholder="Paste something here..."
+                placeholder={getPlaceholder()}
                 value={inputValue}
                 onChange={(e) => setInputValue(e.target.value)}
-                className="h-12 flex-1 border-0 bg-transparent px-6 text-base shadow-none focus-visible:ring-0"
+                className="h-12 flex-1 border-0 bg-transparent px-2 text-base shadow-none focus-visible:ring-0"
               />
+              {inputValue && (
+                <button
+                  type="button"
+                  onClick={clearSearch}
+                  className="flex h-12 w-12 items-center justify-center text-muted-foreground hover:text-foreground"
+                >
+                  <span className="text-lg">×</span>
+                </button>
+              )}
               <button
                 type="button"
                 onClick={handlePasteButtonClick}
                 disabled={createMutation.isPending}
                 className="flex h-12 w-14 items-center justify-center bg-transparent border-0 shadow-none appearance-none"
+                title="Paste from clipboard"
               >
                 <HugeiconsIcon
                   icon={FilePasteIcon}
-                  size={24}
+                  size={22}
                   className="text-primary"
                 />
               </button>
             </form>
           </div>
 
+          {/* Search status indicator */}
+          {isSearching && (
+            <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
+              <HugeiconsIcon icon={SearchIcon} size={16} />
+              <span>Showing {displayedItems.length} results for &quot;{inputValue}&quot;</span>
+            </div>
+          )}
+
           {/* Cart items grid */}
           <div className="flex-1 overflow-y-auto">
             {cartLoading ? (
               <CartSkeleton />
-            ) : cartItems.length === 0 ? (
-              <EmptyState />
+            ) : displayedItems.length === 0 ? (
+              isSearching ? (
+                <SearchEmptyState query={inputValue} />
+              ) : (
+                <EmptyState />
+              )
             ) : (
               <div className="grid grid-cols-[repeat(auto-fill,minmax(255px,1fr))] gap-4 pb-4">
-                {cartItems.map((item) => (
+                {displayedItems.map((item) => (
                   <CartItemCard
                     key={item.id}
                     item={{
@@ -299,6 +381,18 @@ function EmptyState() {
       <p className="text-sm font-medium text-foreground">Your cart is empty</p>
       <p className="text-xs text-muted-foreground">
         Paste a product URL above to save your first item
+      </p>
+    </div>
+  );
+}
+
+function SearchEmptyState({ query }: { query: string }) {
+  return (
+    <div className="flex h-full flex-col items-center justify-center gap-3 text-center">
+      <div className="text-4xl">🔍</div>
+      <p className="text-sm font-medium text-foreground">No results found</p>
+      <p className="text-xs text-muted-foreground">
+        No items match &quot;{query}&quot;. Try a different search term.
       </p>
     </div>
   );
